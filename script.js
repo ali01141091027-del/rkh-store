@@ -1,4 +1,4 @@
-// RKH Store - Updated Script
+// RKH Store - Continuous All Products Grid
 
 const RKH_WHATSAPP = "201144587972";
 const RKH_FACEBOOK = "https://www.facebook.com/share/1522eGSgJz7/";
@@ -21,7 +21,6 @@ function whatsappUrl(message) {
   return `https://wa.me/${RKH_WHATSAPP}?text=${encodeURIComponent(message)}`;
 }
 
-// تحديد قسم الصورة تلقائياً بناءً على اسم الملف إن وجد
 function detectCategory(filename) {
   const name = filename.toLowerCase();
   if (name.includes("steel") || name.includes("stainless") || name.includes("acc")) return "Stainless Steel";
@@ -31,10 +30,9 @@ function detectCategory(filename) {
   if (name.includes("makeup")) return "Makeup";
   if (name.includes("lingerie") || name.includes("night")) return "Lingerie";
   if (name.includes("kitchen") || name.includes("matbakh") || name.includes("cup") || name.includes("set")) return "Kitchen Essentials";
-  return "Kitchen Essentials"; // القسم الافتراضي للصور العامة
+  return "تشكيلة راقية";
 }
 
-// تنسيق اسم المنتج للعرض
 function formatProductName(filename, index) {
   const cleanName = filename.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "").replace(/[-_]/g, " ");
   if (cleanName.toLowerCase().startsWith("img")) {
@@ -45,32 +43,29 @@ function formatProductName(filename, index) {
 
 let allProducts = [];
 
-function renderProducts(category = "") {
+// عرض جميع المنتجات متتالية دون فلترة
+function renderProducts() {
   if (!grid) return;
 
-  const filtered = category
-    ? allProducts.filter(p => p.category.toLowerCase() === category.toLowerCase())
-    : allProducts;
-
   if (activeFilter) {
-    activeFilter.textContent = category ? `القسم الحالي: ${category}` : "جميع المنتجات";
+    activeFilter.style.display = "none";
   }
 
-  if (filtered.length === 0) {
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">لا توجد منتجات في هذا القسم حالياً</div>`;
+  if (allProducts.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">لا توجد منتجات حالياً</div>`;
     return;
   }
 
-  grid.innerHTML = filtered.map(p => `
+  grid.innerHTML = allProducts.map(p => `
     <article class="product-card">
-      <div class="product-image" style="background: #f9f9f9; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 260px; padding: 10px;">
-        <img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+      <div class="product-image" style="width: 100%; height: 320px; overflow: hidden; position: relative; margin: 0; padding: 0; background: #f0f0f0;">
+        <img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;">
         ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ""}
       </div>
 
       <div class="product-info">
         <h3>${escapeHtml(p.name)}</h3>
-        <p>قسم: ${escapeHtml(p.category)}</p>
+        <p style="font-weight: 500; color: #888;">القسم: ${escapeHtml(p.category)}</p>
 
         <button
           class="price-btn"
@@ -95,7 +90,6 @@ async function loadImages() {
 
     const files = await response.json();
 
-    // استخراج كافة ملفات الصور من Repository
     const imageFiles = files.filter(file =>
       file.type === "file" &&
       /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
@@ -109,7 +103,7 @@ async function loadImages() {
       badge: idx < 3 ? "NEW" : ""
     }));
 
-    renderProducts("");
+    renderProducts();
 
   } catch (error) {
     console.error("Error loading images:", error);
@@ -133,15 +127,8 @@ function bindContactLinks() {
   });
 }
 
-// التعامل مع الضغط على الأقسام والأزرار
+// فتح الواتساب عند طلب السعر
 document.addEventListener("click", e => {
-  const categoryCard = e.target.closest("[data-category]");
-
-  if (categoryCard) {
-    const category = categoryCard.dataset.category || categoryCard.getAttribute("data-category");
-    renderProducts(category);
-  }
-
   const priceBtn = e.target.closest("[data-product]");
 
   if (priceBtn) {
@@ -155,9 +142,7 @@ document.addEventListener("click", e => {
 
 const resetBtn = document.getElementById("resetFilter");
 if (resetBtn) {
-  resetBtn.addEventListener("click", () => {
-    renderProducts("");
-  });
+  resetBtn.style.display = "none";
 }
 
 // قائمة الموبايل
