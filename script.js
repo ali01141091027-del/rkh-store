@@ -1,63 +1,13 @@
-// RKH Store
+// RKH Store - Updated Script
 
 const RKH_WHATSAPP = "201144587972";
 const RKH_FACEBOOK = "https://www.facebook.com/share/1522eGSgJz7/";
-
-const products = [
-  {
-    name: "Elegant Gold Necklace",
-    category: "Stainless Steel",
-    badge: "NEW",
-    description: "A delicate stainless steel piece."
-  },
-  {
-    name: "Pearl Hair Clip",
-    category: "Hair Accessories",
-    badge: "NEW",
-    description: "A feminine everyday hair accessory."
-  },
-  {
-    name: "Beauty Care Set",
-    category: "Beauty Care",
-    badge: "NEW",
-    description: "Selected care essentials."
-  },
-  {
-    name: "Everyday Makeup Set",
-    category: "Makeup",
-    badge: "POPULAR",
-    description: "A simple set for your beauty routine."
-  },
-  {
-    name: "Soft Makeup Brush Set",
-    category: "Makeup Tools",
-    badge: "NEW",
-    description: "Practical tools for easy application."
-  },
-  {
-    name: "Elegant Lingerie Set",
-    category: "Lingerie",
-    badge: "NEW",
-    description: "A selected feminine essential."
-  },
-  {
-    name: "Kitchen Organizer",
-    category: "Kitchen Essentials",
-    badge: "NEW",
-    description: "A useful little addition for home."
-  },
-  {
-    name: "Stainless Steel Bracelet",
-    category: "Stainless Steel",
-    badge: "POPULAR",
-    description: "A clean, timeless accessory."
-  }
-];
 
 const grid = document.getElementById("productGrid");
 const activeFilter = document.getElementById("activeFilter");
 
 function escapeHtml(text) {
+  if (!text) return "";
   return text.replace(/[&<>"']/g, m => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -71,41 +21,66 @@ function whatsappUrl(message) {
   return `https://wa.me/${RKH_WHATSAPP}?text=${encodeURIComponent(message)}`;
 }
 
-function renderProducts(category = "", images = []) {
-  const list = category
-    ? products.filter(p => p.category === category)
-    : products;
+// تحديد قسم الصورة تلقائياً بناءً على اسم الملف إن وجد
+function detectCategory(filename) {
+  const name = filename.toLowerCase();
+  if (name.includes("steel") || name.includes("stainless") || name.includes("acc")) return "Stainless Steel";
+  if (name.includes("hair") || name.includes("clip") || name.includes("tok")) return "Hair Accessories";
+  if (name.includes("beauty") || name.includes("care") || name.includes("skin")) return "Beauty Care";
+  if (name.includes("makeup_tool") || name.includes("brush")) return "Makeup Tools";
+  if (name.includes("makeup")) return "Makeup";
+  if (name.includes("lingerie") || name.includes("night")) return "Lingerie";
+  if (name.includes("kitchen") || name.includes("matbakh") || name.includes("cup") || name.includes("set")) return "Kitchen Essentials";
+  return "Kitchen Essentials"; // القسم الافتراضي للصور العامة
+}
 
-  activeFilter.textContent = category ? `Showing: ${category}` : "";
+// تنسيق اسم المنتج للعرض
+function formatProductName(filename, index) {
+  const cleanName = filename.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "").replace(/[-_]/g, " ");
+  if (cleanName.toLowerCase().startsWith("img")) {
+    return `منتج RKH #${index + 1}`;
+  }
+  return cleanName;
+}
 
-  grid.innerHTML = list.map((p, index) => {
-    const image = images[index % images.length];
+let allProducts = [];
 
-    return `
-      <article class="product-card">
-        <div class="product-image">
-          ${
-            image
-              ? `<img src="${image}" alt="${escapeHtml(p.name)}" loading="lazy">`
-              : `<div class="rkh-image-placeholder">RKH</div>`
-          }
-          ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ""}
-        </div>
+function renderProducts(category = "") {
+  if (!grid) return;
 
-        <div class="product-info">
-          <h3>${escapeHtml(p.name)}</h3>
-          <p>${escapeHtml(p.description)}</p>
+  const filtered = category
+    ? allProducts.filter(p => p.category.toLowerCase() === category.toLowerCase())
+    : allProducts;
 
-          <button
-            class="price-btn"
-            data-product="${escapeHtml(p.name)}"
-          >
-            ASK FOR PRICE →
-          </button>
-        </div>
-      </article>
-    `;
-  }).join("");
+  if (activeFilter) {
+    activeFilter.textContent = category ? `القسم الحالي: ${category}` : "جميع المنتجات";
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">لا توجد منتجات في هذا القسم حالياً</div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => `
+    <article class="product-card">
+      <div class="product-image" style="background: #f9f9f9; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 260px; padding: 10px;">
+        <img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+        ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ""}
+      </div>
+
+      <div class="product-info">
+        <h3>${escapeHtml(p.name)}</h3>
+        <p>قسم: ${escapeHtml(p.category)}</p>
+
+        <button
+          class="price-btn"
+          data-product="${escapeHtml(p.name)}"
+        >
+          ASK FOR PRICE →
+        </button>
+      </div>
+    </article>
+  `).join("");
 }
 
 async function loadImages() {
@@ -120,31 +95,33 @@ async function loadImages() {
 
     const files = await response.json();
 
-    const images = files
-      .filter(file =>
-        file.type === "file" &&
-        /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
-      )
-      .map(file => file.download_url);
+    // استخراج كافة ملفات الصور من Repository
+    const imageFiles = files.filter(file =>
+      file.type === "file" &&
+      /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
+    );
 
-    renderProducts("", images);
+    allProducts = imageFiles.map((file, idx) => ({
+      id: file.name,
+      name: formatProductName(file.name, idx),
+      category: detectCategory(file.name),
+      imageUrl: file.download_url,
+      badge: idx < 3 ? "NEW" : ""
+    }));
 
-    document.querySelectorAll("[data-category]").forEach(categoryCard => {
-      categoryCard.addEventListener("click", () => {
-        const category = categoryCard.dataset.category;
-        renderProducts(category, images);
-      });
-    });
+    renderProducts("");
 
   } catch (error) {
-    console.error(error);
-    renderProducts("", []);
+    console.error("Error loading images:", error);
+    if (grid) {
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 20px;">تعذر تحميل الصور، يرجى المحاولة لاحقاً.</div>`;
+    }
   }
 }
 
 function bindContactLinks() {
   document.querySelectorAll("[data-whatsapp]").forEach(a => {
-    a.href = whatsappUrl("Hello RKH, I'd like to ask about your products.");
+    a.href = whatsappUrl("مرحباً RKH Store، أود الاستفسار عن المنتجات.");
     a.target = "_blank";
     a.rel = "noopener";
   });
@@ -156,12 +133,13 @@ function bindContactLinks() {
   });
 }
 
+// التعامل مع الضغط على الأقسام والأزرار
 document.addEventListener("click", e => {
   const categoryCard = e.target.closest("[data-category]");
 
   if (categoryCard) {
-    const category = categoryCard.dataset.category;
-    loadImages().then(() => {});
+    const category = categoryCard.dataset.category || categoryCard.getAttribute("data-category");
+    renderProducts(category);
   }
 
   const priceBtn = e.target.closest("[data-product]");
@@ -169,31 +147,41 @@ document.addEventListener("click", e => {
   if (priceBtn) {
     const product = priceBtn.dataset.product;
     window.open(
-      whatsappUrl(`Hello RKH, I'd like to know the current price of "${product}".`),
+      whatsappUrl(`مرحباً RKH Store، أود معرفة سعر المنتج: "${product}"`),
       "_blank"
     );
   }
 });
 
-document.getElementById("resetFilter").addEventListener("click", () => {
-  loadImages();
-});
+const resetBtn = document.getElementById("resetFilter");
+if (resetBtn) {
+  resetBtn.addEventListener("click", () => {
+    renderProducts("");
+  });
+}
 
+// قائمة الموبايل
 const menu = document.getElementById("mobileMenu");
 const overlay = document.getElementById("menuOverlay");
 
-document.getElementById("menuBtn").addEventListener("click", () => {
-  menu.classList.add("open");
-  overlay.classList.add("show");
-});
-
-function closeMenu() {
-  menu.classList.remove("open");
-  overlay.classList.remove("show");
+const menuBtn = document.getElementById("menuBtn");
+if (menuBtn && menu && overlay) {
+  menuBtn.addEventListener("click", () => {
+    menu.classList.add("open");
+    overlay.classList.add("show");
+  });
 }
 
-document.getElementById("closeMenu").addEventListener("click", closeMenu);
-overlay.addEventListener("click", closeMenu);
+function closeMenu() {
+  if (menu && overlay) {
+    menu.classList.remove("open");
+    overlay.classList.remove("show");
+  }
+}
+
+const closeMenuBtn = document.getElementById("closeMenu");
+if (closeMenuBtn) closeMenuBtn.addEventListener("click", closeMenu);
+if (overlay) overlay.addEventListener("click", closeMenu);
 
 document.querySelectorAll(".mobile-nav a").forEach(a => {
   a.addEventListener("click", closeMenu);
