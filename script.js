@@ -1,4 +1,62 @@
-// RKH Store - Continuous All Products Grid
+// RKH Store - Auto CSS Fix & Full Image Cover
+
+// 1. حقن تنسيقات جافاسكريبت لإلغاء أي تعارض في ملف CSS القديم
+(function injectFixCSS() {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    .product-card {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      background: #ffffff !important;
+      border: 1px solid #e5e5e5 !important;
+      border-radius: 8px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+    .product-image {
+      width: 100% !important;
+      height: 280px !important;
+      min-height: 280px !important;
+      position: relative !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #f4f4f4 !important;
+      display: block !important;
+    }
+    .product-image::before,
+    .product-image::after {
+      display: none !important;
+      content: none !important;
+    }
+    .product-image img {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: cover !important;
+      object-position: center !important;
+      display: block !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .product-info {
+      padding: 15px !important;
+      text-align: center !important;
+    }
+    .product-badge {
+      position: absolute !important;
+      top: 10px !important;
+      right: 10px !important;
+      z-index: 10 !important;
+    }
+  `;
+  document.head.appendChild(style);
+})();
 
 const RKH_WHATSAPP = "201144587972";
 const RKH_FACEBOOK = "https://www.facebook.com/share/1522eGSgJz7/";
@@ -43,7 +101,6 @@ function formatProductName(filename, index) {
 
 let allProducts = [];
 
-// عرض جميع المنتجات متتالية دون فلترة
 function renderProducts() {
   if (!grid) return;
 
@@ -58,14 +115,14 @@ function renderProducts() {
 
   grid.innerHTML = allProducts.map(p => `
     <article class="product-card">
-      <div class="product-image" style="width: 100%; height: 320px; overflow: hidden; position: relative; margin: 0; padding: 0; background: #f0f0f0;">
-        <img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;">
+      <div class="product-image">
+        <img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy">
         ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ""}
       </div>
 
       <div class="product-info">
         <h3>${escapeHtml(p.name)}</h3>
-        <p style="font-weight: 500; color: #888;">القسم: ${escapeHtml(p.category)}</p>
+        <p style="font-weight: 500; color: #888; margin-top: 5px;">القسم: ${escapeHtml(p.category)}</p>
 
         <button
           class="price-btn"
@@ -127,7 +184,6 @@ function bindContactLinks() {
   });
 }
 
-// فتح الواتساب عند طلب السعر
 document.addEventListener("click", e => {
   const priceBtn = e.target.closest("[data-product]");
 
@@ -145,7 +201,6 @@ if (resetBtn) {
   resetBtn.style.display = "none";
 }
 
-// قائمة الموبايل
 const menu = document.getElementById("mobileMenu");
 const overlay = document.getElementById("menuOverlay");
 
